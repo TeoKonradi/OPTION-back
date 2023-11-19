@@ -72,3 +72,18 @@ func formField(field reflect.StructField, val reflect.Value, res *[]any) {
 	}
 	return
 }
+
+func FormContentType(model interface{}) (*map[string]string) {
+	type interf interface {
+		GetTagAndField() (string, string)
+	}
+	res := &map[string]string{}
+
+	form := FormWidget(model)
+	for _, v := range *form {
+		key, val := v.(interf).GetTagAndField()
+		(*res)[key] = val
+	}
+
+	return res
+}

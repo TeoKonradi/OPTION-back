@@ -15,6 +15,10 @@ type Field struct {
 	Unique   bool   `json:"unique"`
 }
 
+func (f Field) GetTagAndField() (string, string) {
+	return f.Tag, f.Field
+}
+
 const (
 	blankStg    = "blank"
 	readOnlyStg = "read_only"

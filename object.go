@@ -67,12 +67,12 @@ func (app *App) CreateForm(form *[]any, actions *[]any) (res Form) {
 }
 
 type List struct {
-	Widget      string         `json:"widget"`
-	Object      string         `json:"object"`
-	Actions     []any          `json:"actions"`
-	ContentType []any          `json:"content_type"`
-	Content     any            `json:"content"`
-	Pagination  ListPagination `json:"pagination"`
+	Widget      string            `json:"widget"`
+	Object      string            `json:"object"`
+	Actions     []any             `json:"actions"`
+	ContentType map[string]string `json:"content_type"`
+	Content     any               `json:"content"`
+	Pagination  ListPagination    `json:"pagination"`
 }
 
 type ListPagination struct {
@@ -81,7 +81,7 @@ type ListPagination struct {
 	Pages      int  `json:"pages"`
 }
 
-func (app *App) CreateList(actions []any, contentType []any, content any, pagination ListPagination) (res List) {
+func (app *App) CreateList(actions []any, contentType map[string]string, content any, pagination ListPagination) (res List) {
 	res.Widget = "form"
 	res.Object = app.Tag
 	res.Actions = actions
@@ -92,8 +92,8 @@ func (app *App) CreateList(actions []any, contentType []any, content any, pagina
 }
 
 type model interface {
-	ModelSave(core *Core, model *model) func(c *gin.Context)
-	ModelGet(core *Core, model *model) func(c *gin.Context)
+	ModelSave(core *Core, model *model, app App) func(c *gin.Context)
+	ModelGet(core *Core, model *model, app App) func(c *gin.Context)
 	ModelList(core *Core, model *any, app App) func(c *gin.Context)
 	ModelDel(core *Core, model *any, app App) func(c *gin.Context)
 }
@@ -122,9 +122,6 @@ func ModelSave(core *Core, model *any, app App) func(c *gin.Context) {
 				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "save error"})
 				return
 			}
-
-			//c.AbortWithStatusJSON(http.StatusUpgradeRequired, ErrorResponseStruct{"TODO", "TODO"})
-			//return
 		} else {
 			err = core.Session.Config.Database.PS.Db.Create(*model).Error
 			if err != nil {
@@ -132,6 +129,7 @@ func ModelSave(core *Core, model *any, app App) func(c *gin.Context) {
 				return
 			}
 		}
+
 		// Get back the function with result
 		c.JSON(http.StatusOK, map[string]any{"model": model})
 		return
@@ -148,9 +146,9 @@ func ModelList(core *Core, model *any, app App) func(c *gin.Context) {
 		if act == nil {
 			act = []any{}
 		}
-		contentType := widget.ActionFormNames(*model)
+		contentType := widget.FormContentType(*model)
 		if contentType == nil {
-			contentType = &[]any{}
+			contentType = &map[string]string{}
 		}
 
 		// Create list of app type
