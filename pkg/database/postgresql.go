@@ -77,15 +77,13 @@ func (d *Database) setupPostgresqlDatabase(conf *Postgresql) (*PostgresqlStorage
 	return d.postgresqlStorage(db, connString, conf), nil
 }
 
-func (s *PostgresqlStorage) Migration(val []interface{}) error {
+func (s *PostgresqlStorage) Migration(val ...interface{}) error {
 	log.Print("Start migration")
 
-	for _, v := range val {
-		err := s.Db.AutoMigrate(&v)
-		if err != nil {
-			log.Println(fmt.Sprintf("%s migrate error - %e", v, err))
-			return err
-		}
+	err := s.Db.AutoMigrate(val...)
+	if err != nil {
+		log.Println(fmt.Sprintf("%s migrate error - %e", val, err))
+		return err
 	}
 
 	log.Print("Migration complete")

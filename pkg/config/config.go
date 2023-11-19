@@ -10,6 +10,7 @@ import (
 
 // Config option config
 type Config struct {
+	Authentication bool
 	// Data
 	Debug        bool
 	SSL          bool
@@ -20,8 +21,9 @@ type Config struct {
 	Data         Data
 
 	// Active
-	Database *database.Database
-	Logger   *log.Logger
+	Database         *database.Database
+	Logger           *log.Logger
+	LoggerMiddleware string
 
 	// NowFunc the function to be used when creating a new timestamp
 	NowFunc func() time.Time

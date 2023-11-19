@@ -189,6 +189,7 @@ Json
     {
       "field": "list_field",
       "blank": true,
+      "default": [],
       "read_only": false,
       "editable": true,
       "help_text": "No help text for this field for now",
@@ -210,7 +211,33 @@ Json
             "eng": "admin_permissions_group",
             "lng": "admin_permissions_group"
           },
-          "val": [
+          "val": {"widget": "form",
+            "object": "user",
+            "actions": [
+              {
+                "type": "link",
+                "name": {
+                  "eng": "Add",
+                  "lng": "Add"
+                },
+                "query": false,
+                "val": "users/create"
+              },
+              {
+                "type": "request",
+                "name": {
+                  "eng": "Delete",
+                  "lng": "Delete"
+                },
+                "query": true,
+                "request_path": "users/del",
+                "request_type": "post",
+                "request_val": [
+                  "id"
+                ]
+              }
+            ],
+            "form": [
             {
               "field": "auto_field",
               "blank": false,
@@ -287,6 +314,7 @@ Json
               ]
             }
           ]
+          }
         }
       ]
     },
@@ -579,3 +607,25 @@ Json
   ]
 }
 ```
+
+# Huh
+"field": "date_time_field",
+"blank": true,
+"read_only": true,
+"default": "2023-08-15 19:29:02.42501+00",
+"editable": false,
+"help_text": "No help text for this field for now",
+"unique": false,
+"name": {
+    "eng": "created_at",
+    "lng": "created_at"
+},
+"val": "2023-08-15 19:29:02.42501+00"
+
+
+auto_field
+date_time_field
+char_field
+bool_field
+list_field
+sub_form_field

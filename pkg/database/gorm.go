@@ -20,6 +20,7 @@ type Database struct {
 }
 
 func Init() (d *Database) {
+	d = &Database{}
 	log.Println("Checking config")
 	_, err := d.RedisConfig()
 	if err != nil {
