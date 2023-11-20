@@ -30,9 +30,9 @@ func main() {
 			Logger:           nil,
 			LoggerMiddleware: "/Users/user/Projects/PetProjects/CRM/data/",
 			NowFunc:          func() time.Time { return time.Now() },
-		}})
-
-	//core.SetUpAuth()
+		},
+	})
+	core.SetUpAuth()
 
 	type Product struct {
 		option.Model

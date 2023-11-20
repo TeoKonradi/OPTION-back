@@ -78,7 +78,7 @@ func (d *Database) setupPostgresqlDatabase(conf *Postgresql) (*PostgresqlStorage
 }
 
 func (s *PostgresqlStorage) Migration(val ...interface{}) error {
-	log.Print("Start migration")
+	//log.Print("Start migration")
 
 	err := s.Db.AutoMigrate(val...)
 	if err != nil {
@@ -86,6 +86,6 @@ func (s *PostgresqlStorage) Migration(val ...interface{}) error {
 		return err
 	}
 
-	log.Print("Migration complete")
+	//log.Print("Migration complete")
 	return nil
 }

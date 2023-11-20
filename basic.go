@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wawilow108/option/pkg/widget"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -74,7 +76,7 @@ type AdminUser struct {
 	IsStaff     bool `json:"is_staff"`
 	IsSuperUser bool `json:"is_super_user"`
 
-	LastLogin time.Time
+	LastLogin time.Time `json:"last_login"`
 }
 
 type AccessTokens struct {
@@ -158,307 +160,50 @@ func (core *Core) CreateStandardAdminUser() {
 	}
 }
 
-//// AdminCreateUser
-//// /admin/user/reg [post]
-//func (core *Core) AdminCreateUser(c *gin.Context) {
-//	const PermissionsName = "create_adm_user"
-//	usr, access := core.AuthRequireUser(c, PermissionsName)
-//	if !access || usr.ID == 0 {
-//		c.AbortWithStatusJSON(http.StatusNetworkAuthenticationRequired, ErrorResponseStruct{Error: "auth required", Message: "auth required"})
-//		return
-//	}
-//
-//	// Get the params
-//	var regBody AdminRegUserStruct
-//	err := c.Bind(&regBody)
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponseStruct{Error: "man, are u dull?", Message: "man, are u dull?"})
-//		return
-//	}
-//
-//	// hash the password
-//	hash, err := bcrypt.GenerateFromPassword([]byte(regBody.Password), 10)
-//	if err != nil {
-//		log.Fatal("error: Password is to long or idk")
-//		return
-//	}
-//
-//	permissionsGroupList := []p.AdminPermissionsGroup{}
-//	for _, grId := range regBody.Groups {
-//		group := p.AdminPermissionsGroup{}
-//		err = a.postgre.Db.Find(&group, grId).Error
-//		if err != nil || group.ID == 0 {
-//			c.AbortWithStatusJSON(http.StatusNetworkAuthenticationRequired, ErrorResponseStruct{Error: "find error", Message: "group find error"})
-//			return
-//		}
-//		permissionsGroupList = append(permissionsGroupList, group)
-//	}
-//
-//	newUser := p.AdminUser{
-//		Username: regBody.Username,
-//		Password: string(hash),
-//
-//		Permissions: regBody.Permissions,
-//
-//		AdminPermissionsGroups: permissionsGroupList,
-//		RefreshTokens:          []p.RefreshTokens{},
-//		AccessTokens:           []p.AccessTokens{},
-//
-//		IsActive:    regBody.IsActive,
-//		IsStaff:     regBody.IsStaff,
-//		IsSuperUser: regBody.IsSuperUser,
-//	}
-//
-//	err = a.postgre.Db.Create(&newUser).Error
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponseStruct{Error: "save error", Message: "save error"})
-//		return
-//	}
-//
-//	c.JSON(http.StatusOK, gin.H{"status": "success"})
-//	return
-//}
-//
-//// AdminUserList
-//// /admin/user [get]
-//// 200 array api.AdminUserStruct
-//func (core *Core) AdminUserList(c *gin.Context) {
-//	const PermissionsName = "list_adm_user"
-//	usr, access := core.AuthRequireUser(c, PermissionsName)
-//	if !access || usr.ID == 0 {
-//		c.AbortWithStatusJSON(http.StatusNetworkAuthenticationRequired, ErrorResponseStruct{Error: "auth required", Message: "auth required"})
-//		return
-//	}
-//
-//	list := []p.AdminUser{}
-//	err := a.postgre.Db.Find(&list).Error
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusNetworkAuthenticationRequired, ErrorResponseStruct{Error: "find error", Message: "find error"})
-//		return
-//	}
-//
-//	res := []AdminUserStruct{}
-//	for _, user := range list {
-//		allPermissions := GetSuperUserPermissions()
-//
-//		permissionsList := []UserPermission{}
-//		for _, pr := range user.Permissions {
-//			pprr, ok := allPermissions[pr]
-//			if ok {
-//				permissionsList = append(permissionsList, pprr)
-//			}
-//		}
-//
-//		gropList := []AdminGroupStruct{}
-//		for _, gr := range user.AdminPermissionsGroups {
-//			grPermissionsList := []UserPermission{}
-//			for _, pr := range gr.Permissions {
-//				pprr, ok := allPermissions[pr]
-//				if ok {
-//					grPermissionsList = append(grPermissionsList, pprr)
-//				}
-//			}
-//
-//			gropList = append(gropList, AdminGroupStruct{
-//				Tag:         gr.Tag,
-//				Permissions: grPermissionsList,
-//			})
-//		}
-//
-//		res = append(res, AdminUserStruct{
-//			ID:          user.ID,
-//			Username:    user.Username,
-//			IsActive:    user.IsActive,
-//			IsStaff:     user.IsStaff,
-//			IsSuperUser: user.IsSuperUser,
-//
-//			LastLogin: int(user.LastLogin.Unix() + a.Location),
-//			Register:  int(user.CreatedAt.Unix() + a.Location),
-//
-//			Permissions: permissionsList,
-//			Groups:      gropList,
-//		})
-//	}
-//
-//	c.JSON(http.StatusOK, gin.H{"total": len(res), "items": res})
-//	return
-//}
-//
-//// AdminUserGet
-//// /admin/user/:id/ [get]
-//// 200 object api.AdminUserStruct
-//func (core *Core) AdminUserGet(c *gin.Context) {
-//	const PermissionsName = "get_adm_user"
-//	usr, access := core.AuthRequireUser(c, PermissionsName)
-//	if !access || usr.ID == 0 {
-//		c.AbortWithStatusJSON(http.StatusNetworkAuthenticationRequired, ErrorResponseStruct{Error: "auth required", Message: "auth required"})
-//		return
-//	}
-//
-//	// Get the params
-//	id_string := c.Param("id")
-//	id, err := strconv.Atoi(id_string)
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponseStruct{Error: "bad id", Message: "bad id"})
-//		return
-//	}
-//
-//	user := p.AdminUser{}
-//	err = a.postgre.Db.Find(&user, id).Error
-//	if err != nil || user.ID == 0 {
-//		c.AbortWithStatusJSON(http.StatusNetworkAuthenticationRequired, ErrorResponseStruct{Error: "find error", Message: "find error"})
-//		return
-//	}
-//
-//	allPermissions := GetSuperUserPermissions()
-//
-//	permissionsList := []UserPermission{}
-//	for _, pr := range user.Permissions {
-//		pprr, ok := allPermissions[pr]
-//		if ok {
-//			permissionsList = append(permissionsList, pprr)
-//		}
-//	}
-//
-//	gropList := []AdminGroupStruct{}
-//	for _, gr := range user.AdminPermissionsGroups {
-//		grPermissionsList := []UserPermission{}
-//		for _, pr := range gr.Permissions {
-//			pprr, ok := allPermissions[pr]
-//			if ok {
-//				grPermissionsList = append(grPermissionsList, pprr)
-//			}
-//		}
-//
-//		gropList = append(gropList, AdminGroupStruct{
-//			Tag:         gr.Tag,
-//			Permissions: grPermissionsList,
-//		})
-//	}
-//
-//	res := AdminUserStruct{
-//		ID:          user.ID,
-//		Username:    user.Username,
-//		IsActive:    user.IsActive,
-//		IsStaff:     user.IsStaff,
-//		IsSuperUser: user.IsSuperUser,
-//
-//		LastLogin: int(user.LastLogin.Unix() + a.Location),
-//		Register:  int(user.CreatedAt.Unix() + a.Location),
-//
-//		Permissions: permissionsList,
-//		Groups:      gropList,
-//	}
-//
-//	c.JSON(http.StatusOK, res)
-//	return
-//}
-//
-//// AdminUserUpdate
-//// /admin/user/:id/update [put]
-//// 200 object api.AdminUserStruct
-//func (core *Core) AdminUserUpdate(c *gin.Context) {
-//	const PermissionsName = "update_adm_user"
-//	usr, access := core.AuthRequireUser(c, PermissionsName)
-//	if !access || usr.ID == 0 {
-//		c.AbortWithStatusJSON(http.StatusNetworkAuthenticationRequired, ErrorResponseStruct{Error: "auth required", Message: "auth required"})
-//		return
-//	}
-//
-//	// Get the params
-//	var regBody AdminUser
-//	err := c.Bind(&regBody)
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponseStruct{Error: "man, are u dull?", Message: "man, are u dull?"})
-//		return
-//	}
-//	id_string := c.Param("id")
-//	id, err := strconv.Atoi(id_string)
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponseStruct{Error: "bad id", Message: "bad id"})
-//		return
-//	}
-//
-//	user := p.AdminUser{}
-//	err = a.postgre.Db.Find(&user, id).Error
-//	if err != nil || user.ID == 0 {
-//		c.AbortWithStatusJSON(http.StatusNetworkAuthenticationRequired, ErrorResponseStruct{Error: "find error", Message: "find error"})
-//		return
-//	}
-//
-//	//Groups      []uint   `json:"groups"`
-//	user.Username = regBody.Username
-//	user.IsActive = regBody.IsActive
-//	user.IsStaff = regBody.IsStaff
-//	user.IsSuperUser = regBody.IsSuperUser
-//	user.Permissions = regBody.Permissions
-//	err = a.postgre.Db.Save(&user).Error
-//	if err != nil || user.ID == 0 {
-//		c.AbortWithStatusJSON(http.StatusNetworkAuthenticationRequired, ErrorResponseStruct{Error: "save error", Message: "save error"})
-//		return
-//	}
-//
-//	c.JSON(http.StatusOK, gin.H{"status": "success"})
-//	return
-//}
-//
-//// AdminUserDel
-//// /admin/user/:id/reg [post]
-//func (core *Core) AdminUserDel(c *gin.Context) {
-//	const PermissionsName = "delete_adm_user"
-//	usr, access := core.AuthRequireUser(c, PermissionsName)
-//	if !access || usr.ID == 0 {
-//		c.AbortWithStatusJSON(http.StatusNetworkAuthenticationRequired, ErrorResponseStruct{Error: "auth required", Message: "auth required"})
-//		return
-//	}
-//
-//	// Get the params
-//	var regBody AdminUser
-//	err := c.Bind(&regBody)
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponseStruct{Error: "man, are u dull?", Message: "man, are u dull?"})
-//		return
-//	}
-//	id_string := c.Param("id")
-//	id, err := strconv.Atoi(id_string)
-//	if err != nil {
-//		c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponseStruct{Error: "bad id", Message: "bad id"})
-//		return
-//	}
-//
-//	user := p.AdminUser{}
-//	err = a.postgre.Db.Find(&user, id).Error
-//	if err != nil || user.ID == 0 {
-//		c.AbortWithStatusJSON(http.StatusNetworkAuthenticationRequired, ErrorResponseStruct{Error: "find error", Message: "find error"})
-//		return
-//	}
-//
-//	err = a.postgre.Db.Delete(&user).Error
-//	if err != nil || user.ID == 0 {
-//		c.AbortWithStatusJSON(http.StatusNetworkAuthenticationRequired, ErrorResponseStruct{Error: "save error", Message: "save error"})
-//		return
-//	}
-//
-//	c.JSON(http.StatusOK, gin.H{"status": "success"})
-//	return
-//}
+// ModelSave override function
+func (_ AdminUser) ModelSave(core *Core, model *model, app App) func(c *gin.Context) {
+	// TODO Access
+	return func(c *gin.Context) {
+		// Get the params
+		idString := c.Param("id")
+		id, err := strconv.Atoi(idString)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponseStruct{Error: "bad id", Message: "Bad id"})
+			return
+		}
 
-// create_adm_group
-// /admin/group/reg [post]
+		err = c.Bind(*model)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponseStruct{Error: "Bad json", Message: "Bad json"})
+			return
+		}
+		if id != 0 {
+			err = core.Session.Config.Database.PS.Db.Save(*model).Error
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "save error"})
+				return
+			}
+		} else {
+			// hash the password
+			hash, err := bcrypt.GenerateFromPassword([]byte((*model).(*AdminUser).Password), 10)
+			if err != nil {
+				log.Fatal("error: Password is to long or idk")
+				return
+			}
+			(*model).(*AdminUser).Password = string(hash)
 
-// list_adm_group
-// /admin/group/ [get]
+			err = core.Session.Config.Database.PS.Db.Create(*model).Error
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "save error"})
+				return
+			}
+		}
 
-// get_adm_group
-// /admin/group/:id/ [get]
-
-// update_adm_group
-// /admin/group/:id/update [put]
-
-// delete_adm_group
-// /admin/group/:id/del [post]
-
-// ---- Functions ----
+		// Get back the function with result
+		c.JSON(http.StatusOK, map[string]any{"model": model})
+		return
+	}
+}
 
 func (core *Core) AuthLoginLogic(user *AdminUser, c *gin.Context) (error, *LoginSuccessResponseStruct) {
 	// Create a new token object, specifying signing method and the claims
@@ -938,7 +683,8 @@ func (core *Core) AuthRequireUser(c *gin.Context, permissionName string) (*Admin
 // /admin/permissions
 // 200 array api.UserPermission
 func (core *Core) AuthAllPermissions(c *gin.Context) {
-	c.JSON(http.StatusOK, AuthSuperUserPermissions)
+	c.JSON(http.StatusOK, core.Permissions)
+	return
 }
 
 func AuthSuperUserPermissions(core *Core) map[string]string {
@@ -950,7 +696,7 @@ func AuthSuperUserPermissions(core *Core) map[string]string {
 }
 
 func (core *Core) SetUpAuth() {
-	authGroup := core.Router.Group("/auth")
+	authGroup := core.Router.Group("/api/v1/auth")
 	authGroup.Use(core.AuthMiddleware)
 	{
 		authGroup.GET("/permissions", core.AuthAllPermissions)
@@ -958,20 +704,63 @@ func (core *Core) SetUpAuth() {
 		authGroup.POST("/login", core.AuthLogin)
 		authGroup.GET("/logout", core.AuthLogout)
 
-		//adminUserGroup := authGroup.Group("/user")
-		//{
-		//	adminUserGroup.POST("/reg", core.AdminCreateUser)
-		//	adminUserGroup.GET("", core.AdminUserList)
-		//adminUserGroup.GET("/:id", core.AdminUserGet)
-		//adminUserGroup.PUT("/:id/update", core.AdminUserUpdate)
-		//adminUserGroup.POST("/:id/del", core.AdminUserDel)
-		//}
-
 		adminMeGroup := authGroup.Group("/me")
 		{
 			adminMeGroup.GET("", core.AuthMe)
 			adminMeGroup.GET("/refresh", core.AuthRefreshToken)
 			adminMeGroup.POST("/change/password", core.AuthChangePassword)
 		}
+	}
+
+	adminUserApp := App{
+		Tag:      "admin_user",
+		Name:     map[string]string{LNG_ENG: "Product", LNG_RU: "Продукт"},
+		Model:    new(AdminUser),
+		Function: []widget.Action{},
+
+		Migration: true,
+
+		SideBar:       true,
+		SideBarWeight: 0,
+
+		//	Basic functions
+		GetFunction:    true,
+		ListFunction:   true,
+		DeleteFunction: true,
+		UpdateFunction: true,
+	}
+	err := core.Session.Config.Database.PS.Migration(&adminUserApp.Model)
+	if err != nil {
+		log.Printf("Server - there was an error calling Serve on router: %v", err)
+	}
+	err = core.Serve(adminUserApp)
+	if err != nil {
+		log.Printf("Server - there was an error calling Serve on router: %v", err)
+	}
+
+	adminPermissionsApp := App{
+		Tag:      "admin_permissions_group",
+		Name:     map[string]string{LNG_ENG: "Product", LNG_RU: "Продукт"},
+		Model:    new(AdminUser),
+		Function: []widget.Action{},
+
+		Migration: true,
+
+		SideBar:       true,
+		SideBarWeight: 0,
+
+		//	Basic functions
+		GetFunction:    true,
+		ListFunction:   true,
+		DeleteFunction: true,
+		UpdateFunction: true,
+	}
+	err = core.Session.Config.Database.PS.Migration(&adminPermissionsApp.Model)
+	if err != nil {
+		log.Printf("Server - there was an error calling Serve on router: %v", err)
+	}
+	err = core.Serve(adminPermissionsApp)
+	if err != nil {
+		log.Printf("Server - there was an error calling Serve on router: %v", err)
 	}
 }

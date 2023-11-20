@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/wawilow108/option/pkg/widget"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"log"
 	"net/http"
 	"reflect"
@@ -36,7 +37,7 @@ type AppGroup struct {
 type App struct {
 	Tag      string
 	Name     map[string]string //[LNG KEY] name on language
-	Model    any
+	Model    model
 	Function []widget.Action
 
 	Migration bool
@@ -94,14 +95,14 @@ func (app *App) CreateList(actions []any, contentType map[string]string, content
 type model interface {
 	ModelSave(core *Core, model *model, app App) func(c *gin.Context)
 	ModelGet(core *Core, model *model, app App) func(c *gin.Context)
-	ModelList(core *Core, model *any, app App) func(c *gin.Context)
-	ModelDel(core *Core, model *any, app App) func(c *gin.Context)
+	ModelList(core *Core, model *model, app App) func(c *gin.Context)
+	ModelDel(core *Core, model *model, app App) func(c *gin.Context)
 }
 
 // ModelSave
 // {{connection}}/{{model_tag}}/{id}/save [POST]
 // Success 200 Model
-func ModelSave(core *Core, model *any, app App) func(c *gin.Context) {
+func (_ Model) ModelSave(core *Core, model *model, app App) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		// Get the params
 		idString := c.Param("id")
@@ -113,7 +114,7 @@ func ModelSave(core *Core, model *any, app App) func(c *gin.Context) {
 
 		err = c.Bind(*model)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "man, are u dull?"})
+			c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponseStruct{Error: "Bad json", Message: "Bad json"})
 			return
 		}
 		if id != 0 {
@@ -139,7 +140,7 @@ func ModelSave(core *Core, model *any, app App) func(c *gin.Context) {
 // ModelList
 // {{connection}}/{{model_tag}}/ [GET]
 // Success 200
-func ModelList(core *Core, model *any, app App) func(c *gin.Context) {
+func (_ Model) ModelList(core *Core, model *model, app App) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		// Get actions
 		act := widget.ActionWidget(app.Function)
@@ -170,7 +171,7 @@ func ModelList(core *Core, model *any, app App) func(c *gin.Context) {
 // {{connection}}/{{model_tag}}/del [POST]
 // Params []id
 // Success 200
-func ModelDel(core *Core, model *any, app App) func(c *gin.Context) {
+func (_ Model) ModelDel(core *Core, model *model, app App) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ids := []uint{}
 		err := c.Bind(&ids)
@@ -179,7 +180,7 @@ func ModelDel(core *Core, model *any, app App) func(c *gin.Context) {
 			return
 		}
 		for _, id := range ids {
-			err = core.Session.Config.Database.PS.Db.Delete(*model, id).Error
+			err = core.Session.Config.Database.PS.Db.Delete(model, id).Error
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponseStruct{"Delete error", "Delete error"})
 				return
@@ -193,7 +194,7 @@ func ModelDel(core *Core, model *any, app App) func(c *gin.Context) {
 // ModelGet
 // {{connection}}/{{model_tag}}/{id}/get [GET]
 // Success 200 Model
-func ModelGet(core *Core, model *any, app App) func(c *gin.Context) {
+func (_ Model) ModelGet(core *Core, model *model, app App) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		// Get the params
 		idString := c.Param("id")
@@ -206,7 +207,7 @@ func ModelGet(core *Core, model *any, app App) func(c *gin.Context) {
 		if id != 0 {
 			// Get the value
 			core.Session.Config.Database.PS.Db.Statement.RaiseErrorOnNotFound = true
-			err = core.Session.Config.Database.PS.Db.Find(model, id).Error
+			err = core.Session.Config.Database.PS.Db.Preload(clause.Associations).Find(model, id).Error
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusBadRequest, ErrorResponseStruct{Error: "not found", Message: fmt.Sprintf("Not found, perhaps %d doen't exist?", id)})
 				return
@@ -251,6 +252,14 @@ func (core *Core) Serve(app App) (err error) {
 
 	if app.DeleteFunction {
 		const delTag = "del"
+
+		//// Add permission
+		//permission := fmt.Sprintf("%s_%s", app.Tag, delTag)
+		//_, ok := AuthSuperUserPermissions(core)[permission]
+		//if !ok {
+		//	core.Permissions = append(core.Permissions, permission)
+		//}
+
 		type delModel struct {
 			ID uint `json:"id"`
 		}
@@ -261,23 +270,59 @@ func (core *Core) Serve(app App) (err error) {
 			Method: methodPost,
 			Query:  true,
 			Access: fmt.Sprintf("%s-%s", app.Tag, delTag),
-			Func:   ModelDel(core, &app.Model, app),
+			Func:   app.Model.ModelDel(core, &app.Model, app),
 		})
 		//core.Router.GET(fmt.Sprintf("api/v1/%s/del", app.Tag), ModelDel(core, &app.Model, app))
 	}
 
 	if app.GetFunction {
-		core.Router.GET(fmt.Sprintf("api/v1/%s/:id/get", app.Tag), ModelGet(core, &app.Model, app))
+		const getTag = "get"
+
+		// Add permission
+		permission := fmt.Sprintf("%s_%s", app.Tag, getTag)
+		_, ok := AuthSuperUserPermissions(core)[permission]
+		if !ok {
+			core.Permissions = append(core.Permissions, permission)
+		}
+
+		core.Router.GET(fmt.Sprintf("api/v1/%s/:id/get", app.Tag), app.Model.ModelGet(core, &app.Model, app))
 	}
 	if app.ListFunction {
-		core.Router.GET(fmt.Sprintf("api/v1/%s/list", app.Tag), ModelList(core, &app.Model, app))
+		const getTag = "get"
+
+		// Add permission
+		permission := fmt.Sprintf("%s_%s", app.Tag, getTag)
+		_, ok := AuthSuperUserPermissions(core)[permission]
+		if !ok {
+			core.Permissions = append(core.Permissions, permission)
+		}
+
+		core.Router.GET(fmt.Sprintf("api/v1/%s/list", app.Tag), app.Model.ModelList(core, &app.Model, app))
 	}
 	if app.UpdateFunction {
-		core.Router.POST(fmt.Sprintf("api/v1/%s/:id/save", app.Tag), ModelSave(core, &app.Model, app))
+		const updateTag = "update"
+
+		// Add permission
+		permission := fmt.Sprintf("%s_%s", app.Tag, updateTag)
+		_, ok := AuthSuperUserPermissions(core)[permission]
+		if !ok {
+			core.Permissions = append(core.Permissions, permission)
+		}
+
+		core.Router.POST(fmt.Sprintf("api/v1/%s/:id/save", app.Tag), app.Model.ModelSave(core, &app.Model, app))
 	}
 
 	functionTag := map[string]bool{}
 	for _, action := range app.Function {
+		const actionTag = "action"
+
+		// Add permission
+		permission := fmt.Sprintf("%s_%s_%s", app.Tag, actionTag, action.Tag)
+		_, ok := AuthSuperUserPermissions(core)[permission]
+		if !ok {
+			core.Permissions = append(core.Permissions, permission)
+		}
+
 		// Function tag must be unique
 		if functionTag[action.Tag] {
 			return errors.New(fmt.Sprintf("not unique function tag: %s", action.Tag))

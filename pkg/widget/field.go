@@ -254,57 +254,55 @@ func buildFieldBool(Tag string, Name Name, Default bool, Val bool, stg string) (
 	return res
 }
 
-// list
+// slice
 
-const fieldList = "list_field"
+const fieldSlice = "list_field"
 
-type FieldList struct {
+type FieldSlice struct {
 	Field
-	ListField string `json:"list_field"`
-	Blank     bool   `json:"blank"`
-	ReadOnly  bool   `json:"read_only"`
-	Editable  bool   `json:"editable"`
-	HelpText  string `json:"help_text"`
-	Unique    bool   `json:"unique"`
-	Name      Name   `json:"name"`
-	Val       []any  `json:"val"`
+	SliceField string `json:"list_field"`
+	Blank      bool   `json:"blank"`
+	ReadOnly   bool   `json:"read_only"`
+	Editable   bool   `json:"editable"`
+	HelpText   string `json:"help_text"`
+	Unique     bool   `json:"unique"`
+	Name       Name   `json:"name"`
+	Val        any    `json:"val"`
 }
 
-// TODO
-//func buildFieldList(Tag string, Name Name, Default bool, Val bool, stg string) (res FieldList) {
-//	// TODO
-//
-//	blank := true
-//	readOnly := true
-//	editable := true
-//	unique := true
-//	if strings.Contains(stg, blankStg) {
-//		blank = true
-//	}
-//	if strings.Contains(stg, readOnlyStg) {
-//		readOnly = true
-//	}
-//	if strings.Contains(stg, editableStg) {
-//		editable = true
-//	}
-//	if strings.Contains(stg, uniqueStg) {
-//		unique = true
-//	}
-//
-//	res.Field = Field{
-//		Field:    fieldList,
-//		Tag:      Tag,
-//		Blank:    blank,
-//		ReadOnly: readOnly,
-//		Editable: editable,
-//		HelpText: "", // TODO
-//		Unique:   unique,
-//	}
-//	res.Name = Name
-//	res.Default = Default
-//	res.Val = Val
-//	return res
-//}
+func buildFieldSlice(Tag string, Name Name, Type string, Val any, stg string) (res FieldSlice) {
+	// TODO
+	blank := true
+	readOnly := true
+	editable := true
+	unique := true
+	if strings.Contains(stg, blankStg) {
+		blank = true
+	}
+	if strings.Contains(stg, readOnlyStg) {
+		readOnly = true
+	}
+	if strings.Contains(stg, editableStg) {
+		editable = true
+	}
+	if strings.Contains(stg, uniqueStg) {
+		unique = true
+	}
+
+	res.Field = Field{
+		Field:    fieldSlice,
+		Tag:      Tag,
+		Blank:    blank,
+		ReadOnly: readOnly,
+		Editable: editable,
+		HelpText: "", // TODO
+		Unique:   unique,
+	}
+	res.SliceField = Type
+	res.Name = Name
+	res.Val = Val
+	return res
+}
 
 // sub form
 

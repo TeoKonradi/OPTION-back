@@ -49,12 +49,16 @@ func formField(field reflect.StructField, val reflect.Value, res *[]any) {
 		(*res) = append(*res, buildFieldInt(tag, name, 0, int(val.Int()), stg))
 	case field.Type.Kind() == reflect.Uint:
 		(*res) = append(*res, buildFieldInt(tag, name, 0, int(val.Uint()), stg))
+	case field.Type.Kind() == reflect.Bool:
+		(*res) = append(*res, buildFieldBool(tag, name, false, val.Bool(), stg))
 	case field.Type.String() == "time.Time":
 		timeDefault := time.Unix(0, 0)
 		(*res) = append(*res, buildFieldDateTime(tag, name, &timeDefault, val.Interface(), stg))
 	case field.Type.String() == "gorm.DeletedAt":
 		timeDefault := time.Unix(0, 0)
 		(*res) = append(*res, buildFieldDateTime(tag, name, &timeDefault, val.Interface().(gorm.DeletedAt).Time, stg))
+	case field.Type.Kind() == reflect.Slice:
+		(*res) = append(*res, buildFieldSlice(tag, name, val.Type().Elem().String(), val.Interface(), stg))
 	case field.Type.Kind() == reflect.Struct:
 		if field.Type.String() == "option.Model" {
 			mm := reflect.TypeOf(val.Interface())
@@ -68,12 +72,13 @@ func formField(field reflect.StructField, val reflect.Value, res *[]any) {
 			log.Println(fmt.Sprintf("Unsupported struct %s - %s", field.Name, field.Type))
 		}
 	default:
+		fmt.Println(field.Type.Kind())
 		log.Println(fmt.Sprintf("Unsupported type %s - %s", field.Name, field.Type))
 	}
 	return
 }
 
-func FormContentType(model interface{}) (*map[string]string) {
+func FormContentType(model interface{}) *map[string]string {
 	type interf interface {
 		GetTagAndField() (string, string)
 	}
