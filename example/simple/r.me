@@ -1,0 +1,4 @@
+export $(grep -v '^#' local.env | xargs -0)
+docker-compose up -d --no-deps --build
+go mod download
+go run .
